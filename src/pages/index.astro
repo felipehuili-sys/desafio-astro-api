@@ -37,6 +37,14 @@ const products: Product[] = data.products;
           autocomplete="off"
         />
         <span class="search-icon">🔍</span>
+        <label class="category-filter" for="category-filter" aria-label="Filtrar por categoría">
+          <select id="category-filter">
+            <option value="all">Todas</option>
+            {Array.from(new Set(products.map((product) => product.category))).sort().map((category) => (
+              <option value={category.toLowerCase()}>{category}</option>
+            ))}
+          </select>
+        </label>
       </div>
       <p id="search-counter" class="search-counter">
         Mostrando {products.length} productos
@@ -82,24 +90,31 @@ const products: Product[] = data.products;
 
   .search-box {
     position: relative;
+    display: flex;
+    align-items: center;
     width: 100%;
     max-width: 600px;
+    padding-right: 0.5rem;
+    border: 2px solid var(--border-color);
+    border-radius: 30px;
+    background: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .search-box:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
   }
 
   .search-box input {
-    width: 100%;
-    padding: 0.85rem 1rem 0.85rem 2.8rem;
+    min-width: 0;
+    flex: 1;
+    padding: 0.85rem 0.5rem 0.85rem 2.8rem;
     font-size: 1rem;
-    border: 2px solid var(--border-color);
+    border: 0;
     border-radius: 30px;
     outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    background-color: #fff;
-  }
-
-  .search-box input:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+    background-color: transparent;
   }
 
   .search-icon {
@@ -138,7 +153,7 @@ const products: Product[] = data.products;
     color: var(--text-muted);
   }
 
-  .hidden {
+  :global(.hidden) {
     display: none !important;
   }
 
@@ -159,44 +174,37 @@ const products: Product[] = data.products;
   // Buscador funcional en el cliente (JavaScript Vanilla)
   document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    const categoryFilter = document.getElementById('category-filter') as HTMLSelectElement;
     const productCards = document.querySelectorAll<HTMLElement>('.product-card');
     const noResultsMsg = document.getElementById('no-results');
     const searchCounter = document.getElementById('search-counter');
 
-    if (!searchInput) return;
+    if (!searchInput || !categoryFilter) return;
 
-    searchInput.addEventListener('input', (e) => {
-      const query = (e.target as HTMLInputElement).value.trim().toLowerCase();
+    const filterProducts = () => {
+      const query = searchInput.value.trim().toLocaleLowerCase();
+      const selectedCategory = categoryFilter.value;
       let visibleCount = 0;
 
       productCards.forEach((card) => {
         const title = card.getAttribute('data-title') || '';
         const description = card.getAttribute('data-description') || '';
         const category = card.getAttribute('data-category') || '';
+        const matchesText = (title + ' ' + description + ' ' + category).includes(query);
+        const matchesCategory = selectedCategory === 'all' || category === selectedCategory;
+        const matches = matchesText && matchesCategory;
 
-        const matches = title.includes(query) || description.includes(query) || category.includes(query);
-
-        if (matches) {
-          card.classList.remove('hidden');
-          visibleCount++;
-        } else {
-          card.classList.add('hidden');
-        }
+        card.classList.toggle('hidden', !matches);
+        if (matches) visibleCount++;
       });
 
-      // Actualizar contador de resultados
       if (searchCounter) {
-        searchCounter.textContent = `Mostrando ${visibleCount} producto${visibleCount === 1 ? '' : 's'}`;
+        searchCounter.textContent = 'Mostrando ' + visibleCount + ' producto' + (visibleCount === 1 ? '' : 's');
       }
+      noResultsMsg?.classList.toggle('hidden', visibleCount !== 0);
+    };
 
-      // Mostrar/ocultar mensaje sin resultados
-      if (noResultsMsg) {
-        if (visibleCount === 0) {
-          noResultsMsg.classList.remove('hidden');
-        } else {
-          noResultsMsg.classList.add('hidden');
-        }
-      }
-    });
+    searchInput.addEventListener('input', filterProducts);
+    categoryFilter.addEventListener('change', filterProducts);
   });
 </script>
